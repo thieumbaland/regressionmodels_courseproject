@@ -1,0 +1,94 @@
+---
+title: "Regression Analysis - Course Project"
+author: "Mathieu Wauters"
+date: "11 mei 2016"
+output: pdf_document
+---
+
+# Executive Summary
+
+We were contacted by Motor Trend, an automobile industry magazine. Looking at a dataset of a collection of cars, we were asked to analyze the relationship of a number of car characteristics with the Miles Per Gallon (MPG). We came to the following conclusions:
+
+* A manual transmission leads to an increase of MPG of 1.81, holding all other variables constant.
+* The other variables that were included in our statistical model were the number of cylinders, horsepower and weight.
+
+# Exploratory Analysis
+
+The `mtcars` dataset counts 32 observations and 11 variables. A summary is provided below. In the next steps, we will have to determine which of those 11 variables play a significant role in predicting the MPG.
+
+```{r}
+library(ggplot2)
+data(mtcars)
+summary(mtcars)
+mtcars$cyl  <- factor(mtcars$cyl)
+mtcars$vs   <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am   <- factor(mtcars$am,labels=c("Automatic","Manual"))
+```
+
+# Regression analysis
+
+### Manual vs. automatic transmission
+
+Prior to testing the relationship between transmission and MPG, it is a good idea to visually explore the relationship. The supporting graph for this relationship can be found in the `Appendix` section.
+Next, we test to see if the observed difference between transmission type and MPG is statistically significant. The below analysis suggests there is a significant difference (p-value of 0.001374<0.05).
+```{r}
+t.test(mpg~am,data=mtcars)
+```
+### Model selection
+
+In order to predict the MPG, we have examined an initial model containing only `am` as the explanatory variable, a complete model containing all explanatory variables and a final model that uses Akaike's Information Criterion to find out what the best model should be (this is achieved using the `step` function).
+```{r}
+model.initial<-lm(mpg ~ am,data=mtcars)
+model.allvars<-lm(mpg ~ .,data=mtcars)
+model.final<-step(model.allvars,direction="both",trace=0)
+summary(model.final)
+```
+Note: summaries of the models can be found in the Appendix.
+We test whether there is a significant difference between the initial and final model. Phrased alternatively, do the variables added in `model.final` contribute to performance in a statistically significant manner? The below analysis points out that there is a significant difference (p-value < 0.05). Hence, we reject the null hypothesis and continue with `model.final`.
+```{r}
+anova(model.initial,model.final)
+```
+
+#### Model interpretation
+
+The coefficients of `model.final` yield the following insights:
+
+* Cars with a manual transmission have an MPG value that is 1.81 higher than cars with an automatic transmission, keeping all other variables constant.
+* An increase of 1,000 lb in weight leads on average to an MPG decrease of 2.50, keeping all other variables constant.
+* Horsepower only has a very small effect on MPG (0.32 increase per 10 hp increase)
+* A car with more cylinders has a smaller MPG. The MPG is 3.03 lower when going from a 4 cylinder car to a 6 cylinder car and 2.16 lower when changing from a 6 cylinder car to an 8 cylinder car.
+
+### Diagnostics
+
+Finally, we run some diagnostics to confirm we can use linear regression (i.e. check a number of the assumptions of linear regression) but also to identify influential data points. The graphs depicted in the Appendix lead to the following conclusions:
+
+* A comparison of the residuals and fitted values shows there is no consistent trend
+* The residuals are very closely normally distributed, as evidenced by the Q-Qplot.
+* The scale-location plot suggests homoskedasticity.
+* Some points have increased leverage (cf. labelled points in residuals vs. leverage plot)
+
+The points with increased leverage can also be found in the Appendix.
+
+# Appendix
+Exploratory graph:
+```{r}
+ggplot(mtcars,aes(x=am,y=mpg))+geom_boxplot()+theme_bw()
+```
+Model summaries:
+```{r}
+summary(model.initial)
+summary(model.allvars)
+```
+Diagnostics:
+```{r}
+par(mfrow=c(2,2))
+plot(model.final)
+```
+
+Leverage points:
+```{r}
+sort(hatvalues(model.final))[1:5]
+sort(dfbetas(model.final))[1:5]
+```
